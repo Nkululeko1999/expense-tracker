@@ -4,8 +4,9 @@ import bcryptjs from "bcryptjs";
 import { User } from "../models/user.models.js";
 import { generateCode } from "../utils/helper.utils.js";
 import { transporter } from "../config/email.config.js";
-import { verificationTemplate } from "../utils/template.utils.js";
+import { forgotPasswordTemplate, signUpSuccessTemplate, verificationTemplate } from "../utils/template.utils.js";
 import jwt from "jsonwebtoken";
+
 
 
 // #######################################################################
@@ -45,11 +46,12 @@ export const register = async (req, res) => {
 
         //generate code and set expiration time of the code
         const code = generateCode();
+        const hashedCode = bcryptjs.hashSync(code, 12);
         let codeExp = new Date();
         codeExp.setMinutes(codeExp.getMinutes() + 10);    //code expiry after 10 minutes
 
         //Create a new user using the User model
-        const newUser = new User({ username, email, password: hashedPassword, code: code, codeExp: codeExp });
+        const newUser = new User({ username, email, password: hashedPassword, code: hashedCode, codeExp: codeExp });
 
         //save user
         await newUser.save();
@@ -62,8 +64,8 @@ export const register = async (req, res) => {
             verified: newUser.userVerified
         };
 
-        //Send email to user with verification token
-        const info = await transporter.sendMail({
+        //Send email to user with verification code
+        await transporter.sendMail({
             from: process.env.NODEMAILER_USER, 
             to: email, 
             subject: "One-time verification code", 
@@ -82,6 +84,277 @@ export const register = async (req, res) => {
             data: rest,
             token: token
         });
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const verify = async (req, res) => {
+    try {
+        const { userId, code } = req.body;
+
+        //get user by Id
+        const user = await User.findById({_id: userId});
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please contact us."
+            });
+        }
+
+        //check if code provided is the same as the saved code - remember saved code is hashed
+        const isCodeMatching = bcryptjs.compareSync(code, user.code);
+        if(!isCodeMatching){
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Invalid verification code. Please resend code."
+            });
+        }
+
+        //check the expiration time for the code
+        if(user.codeExp < new Date()){
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Verification code expired. Please resend code."
+            });
+        }
+
+        //Update User's verified status
+        user.userVerified = true;
+
+        //set code and codeExp to null
+        user.code = null;
+        user.codeExp = null;
+        
+        //save user with updated status
+        await user.save();
+
+        //Extract only useful information
+        const rest = {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            verified: user.userVerified
+        };
+
+        //Send email to user => successfully registered to expense tracker
+        //Send email to user with verification code
+        await transporter.sendMail({
+            from: process.env.NODEMAILER_USER, 
+            to: email, 
+            subject: "Successfully Signed Up", 
+            html: signUpSuccessTemplate(), 
+          });
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            message: "User account verified successfully.",
+            data: rest
+        });
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const resendVerificationCode = async (req, res) => {
+    const { email } = req.body;
+    try {
+        //get user by email
+        const user = await User.findOne({email: email});
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please create account."
+            });
+        }
+
+        //generate code, codeExp and hash the code
+        const code = generateCode();
+        const hashedCode = bcryptjs.hashSync(code, 12);
+        let codeExp = new Date();
+        codeExp.setMinutes(codeExp.getMinutes() + 10);   
+
+        //Update user's code and code exp
+        user.code = hashedCode;
+        user.codeExp = codeExp;
+
+        //save user
+        await user.save();
+
+        //Extract only useful information
+        const rest = {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            verified: user.userVerified
+        };
+
+        //Send email to user with verification token
+        await transporter.sendMail({
+            from: process.env.NODEMAILER_USER, 
+            to: email, 
+            subject: "One-time verification code", 
+            html: verificationTemplate(code), 
+          });
+
+          //create jwt token
+        const secret = process.env.JWT_SECERT;
+        const token = jwt.sign(rest, secret, {expiresIn:'10m'});
+
+        return res.status(200).json({
+            success: true,
+            status: 200,
+            message: "Verification code resent successfully.",
+            token: token
+        });
+
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const forgetPassword = async (req, res) => {
+    const { email } = req.body;
+    try {
+        //check if email is valid
+        const isEmailValid = validateEmail(email);
+        if(!isEmailValid){
+            return res.status(422).json({
+                success: false,
+                statusCode: 422,
+                message: "Email format is invalid"
+            });
+        }
+
+        //Get user by email
+        const user = await User.findOne({email: email});
+        if(!user){
+            return res.status(422).json({
+                success: false,
+                statusCode: 404,
+                message: "User with this email is not found. Please login"
+            });
+        }
+
+        //Generate code
+        const code = generateCode();
+        const hashedCode = bcryptjs.hashSync(code, 12);
+        let codeExp = new Date();
+        codeExp = codeExp.setMinutes(codeExp.getMinutes() + 10);
+
+        //Update code and codeExp 
+        user.code = hashedCode;
+        user.codeExp = codeExp;
+
+        await user.save();
+
+         //Extract only useful information
+         const rest = {
+             id: user._id,
+             username: user.username,
+             email: user.email,
+             verified: user.userVerified
+         };
+ 
+
+         //Send email to user with verification code
+         await transporter.sendMail({
+            from: process.env.NODEMAILER_USER, 
+            to: email, 
+            subject: "One-time verification code - Forgot Password", 
+            html: forgotPasswordTemplate(code), 
+          });
+
+
+        //create jwt token
+        const secret = process.env.JWT_SECERT;
+        const token = jwt.sign(rest, secret, {expiresIn:'10m'});
+
+        return res.status(200).json({
+            success: true,
+            status: 200,
+            message: 'Verication code sent to your email. Confirm the code',
+            data: rest,
+            token: token
+        });
+
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const resetPassword = async (req, res, next) => {
+    const { newPassword, userId, code } = req.body;
+    try {
+        //validate password => call validate util
+        if(!(validatePass(newPassword))){
+            return res.status(422).json({success: false, status: 422, message: 'Password format is invalid'});
+        }
+
+        //Get user by userId
+        const user = await User.findById({_id: userId});
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please create account."
+            });
+        }
+
+        //check if code does exist
+        if(user.code === null || user.codeExp === null){
+            return res.status(404).json({
+                sucess: false,
+                statusCode: 404,
+                message: "Please forgot password again. Verification code not found"
+            })
+        }
+
+        // Check if code provided is the same as the saved code - remember saved code is hashed
+        const isCodeMatching = bcryptjs.compareSync(code, user.code);
+        if (!isCodeMatching) {
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Invalid verification code. Please resend code."
+            });
+        }
+
+        // Check the expiration time for the code
+        if (user.codeExp < new Date()) {
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Verification code expired. Please resend code."
+            });
+        }
+
+
+
+        //Hash new password
+        const newPasswordHashed = bcryptjs.hashSync(newPassword, 12);
+
+        //Update password
+        user.password = newPasswordHashed;
+
+        //Reset code and codeExp
+        user.code = null;
+        user.codeExp = null;
+
+        //Save user
+        await user.save();
+
+        return res.status(200).json({
+            sucess: true,
+            statusCode: 200,
+            message: "Password reset sucessfully."
+        });
+        
     } catch (error) {
         errorHandler(req, res, error);
     }
