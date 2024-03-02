@@ -4,8 +4,9 @@ import bcryptjs from "bcryptjs";
 import { User } from "../models/user.models.js";
 import { generateCode } from "../utils/helper.utils.js";
 import { transporter } from "../config/email.config.js";
-import { forgotPasswordTemplate, verificationTemplate } from "../utils/template.utils.js";
+import { forgotPasswordTemplate, signUpSuccessTemplate, verificationTemplate } from "../utils/template.utils.js";
 import jwt from "jsonwebtoken";
+
 
 
 // #######################################################################
@@ -138,6 +139,15 @@ export const verify = async (req, res) => {
             email: user.email,
             verified: user.userVerified
         };
+
+        //Send email to user => successfully registered to expense tracker
+        //Send email to user with verification code
+        await transporter.sendMail({
+            from: process.env.NODEMAILER_USER, 
+            to: email, 
+            subject: "Successfully Signed Up", 
+            html: signUpSuccessTemplate(), 
+          });
 
         return res.status(200).json({
             success: true,
@@ -273,6 +283,78 @@ export const forgetPassword = async (req, res) => {
             token: token
         });
 
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const resetPassword = async (req, res, next) => {
+    const { newPassword, userId, code } = req.body;
+    try {
+        //validate password => call validate util
+        if(!(validatePass(newPassword))){
+            return res.status(422).json({success: false, status: 422, message: 'Password format is invalid'});
+        }
+
+        //Get user by userId
+        const user = await User.findById({_id: userId});
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please create account."
+            });
+        }
+
+        //check if code does exist
+        if(user.code === null || user.codeExp === null){
+            return res.status(404).json({
+                sucess: false,
+                statusCode: 404,
+                message: "Please forgot password again. Verification code not found"
+            })
+        }
+
+        // Check if code provided is the same as the saved code - remember saved code is hashed
+        const isCodeMatching = bcryptjs.compareSync(code, user.code);
+        if (!isCodeMatching) {
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Invalid verification code. Please resend code."
+            });
+        }
+
+        // Check the expiration time for the code
+        if (user.codeExp < new Date()) {
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Verification code expired. Please resend code."
+            });
+        }
+
+
+
+        //Hash new password
+        const newPasswordHashed = bcryptjs.hashSync(newPassword, 12);
+
+        //Update password
+        user.password = newPasswordHashed;
+
+        //Reset code and codeExp
+        user.code = null;
+        user.codeExp = null;
+
+        //Save user
+        await user.save();
+
+        return res.status(200).json({
+            sucess: true,
+            statusCode: 200,
+            message: "Password reset sucessfully."
+        });
+        
     } catch (error) {
         errorHandler(req, res, error);
     }
