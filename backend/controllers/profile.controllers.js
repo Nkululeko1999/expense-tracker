@@ -62,3 +62,24 @@ export const updateProfile = async (req, res) => {
         errorHandler(req, res, error);
     }
 };
+
+export const getProfileDetails = async (req, res) => {
+    const { userId } = req.params;
+    try {
+        // Find the user in the database
+        const user = await User.findById(userId);
+
+        // Check if user exists
+        if (!user) {
+            return res.status(404).json({ success: false, statusCode: 404, message: 'User not found' });
+        }
+
+        // Remove password field from the user object
+        const { password, ...rest } = user;
+
+        // Return user's profile details
+        return res.status(200).json({ success: true, statusCode: 200, data: rest._doc });
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+};
