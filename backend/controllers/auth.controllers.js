@@ -87,3 +87,52 @@ export const register = async (req, res) => {
         errorHandler(req, res, error);
     }
 }
+
+export const verify = async (req, res) => {
+    try {
+        const { userId, code } = req.body;
+
+        //get user by Id
+        const user = await User.findById({_id: userId});
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please contact us."
+            });
+        }
+
+        //check if code provided is the same as the saved code - remember saved code is hashed
+        const isCodeMatching = bcryptjs.compareSync(code, user.code);
+        if(!isCodeMatching){
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Invalid verification code. Please resend code."
+            });
+        }
+
+        //check the expiration time for the code
+        if(user.codeExp < new Date()){
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "Verification code expired."
+            });
+        }
+
+        //Update User's verified status
+        user.verified = true;
+        
+        //save user with updated status
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            message: "User account verified successfully."
+        });
+    } catch (error) {
+        errorHandler(error);
+    }
+}
