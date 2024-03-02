@@ -1,5 +1,6 @@
 import express from "express";
 import { createBudget, deleteBudget, getBudgets, updateBudget } from "../controllers/budget.controllers.js";
+import { authenticateToken } from "../middlewares/auth.middlewares.js";
 
 const budget_router = express.Router();
 

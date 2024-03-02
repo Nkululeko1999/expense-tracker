@@ -1,3 +1,4 @@
+import { errorHandler } from "../middlewares/error.middlewares.js";
 import { Budget } from "../models/budget.models.js";
 
 export const createBudget = async (req, res) => {
@@ -5,9 +6,9 @@ export const createBudget = async (req, res) => {
     const userDetails = req.user;
     const userId = userDetails.id;
 
-    const { category, amount, description, startDate, endDate } = req.body;
+    const { category, amount, startDate, endDate } = req.body;
     try {
-        if (!category || !amount || !description || !startDate || !endDate) {
+        if (!category || !amount || !startDate || !endDate) {
             return res.status(400).json({
                 success: false,
                 statusCode: 400,
@@ -16,7 +17,7 @@ export const createBudget = async (req, res) => {
         }
         
         // Create new budget
-        const newBudget = new Budget({ userId, category, amount, description, startDate, endDate });
+        const newBudget = new Budget({ userId, category, amount, startDate, endDate });
 
         // Save details to database
         await newBudget.save();
@@ -52,7 +53,7 @@ export const updateBudget = async (req, res) => {
     const { id } = req.params;
 
     try {
-        if (!category || !amount || !description || !startDate || !endDate) {
+        if (!category || !amount || !startDate || !endDate) {
             return res.status(400).json({
                 success: false,
                 statusCode: 400,
@@ -60,7 +61,7 @@ export const updateBudget = async (req, res) => {
             });
         }
 
-        const newBudgetData = { category, amount, description, startDate, endDate };
+        const newBudgetData = { category, amount, startDate, endDate };
 
         // Get budget by id and update it
         const updatedBudget = await Budget.findByIdAndUpdate(id, newBudgetData, { new: true });
