@@ -5,28 +5,32 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
+        default: null,
     },
 
     lastName: {
-        type: String
+        type: String,
+        default: null,
     },
 
     phoneNumber: {
         type: String,
-        unique: true
+        default: null,
     },
 
     gender: {
         type: String,
+        default: null,
     },
 
     address: {
-        type: String
+        type: String,
+        default: null,
     },
 
     profilePic: {
         data: Buffer,  // Data field to store the image binary data
-        contentType: String   // Content type of the image (e.g., 'image/jpeg', 'image/png')
+        contentType: String,   // Content type of the image (e.g., 'image/jpeg', 'image/png')
     },
 
     username:{
@@ -44,7 +48,12 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-});
+
+    userVerified: {
+        type: Boolean,
+        default: false,
+    }
+}, {timestamps: true});
 
 // Create Model for user
 export const User = mongoose.model('User', userSchema);

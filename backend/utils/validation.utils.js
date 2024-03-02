@@ -4,9 +4,9 @@ export const validateEmail = (email) => {
     let isValid;
     if(validator.isEmail(email)){
         isValid = true
+    }else {
+        isValid = false
     }
-
-    isValid = false
 
     return isValid;
 }
