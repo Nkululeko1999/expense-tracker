@@ -45,11 +45,12 @@ export const register = async (req, res) => {
 
         //generate code and set expiration time of the code
         const code = generateCode();
+        const hashedCode = bcryptjs.hashSync(code, 12);
         let codeExp = new Date();
         codeExp.setMinutes(codeExp.getMinutes() + 10);    //code expiry after 10 minutes
 
         //Create a new user using the User model
-        const newUser = new User({ username, email, password: hashedPassword, code: code, codeExp: codeExp });
+        const newUser = new User({ username, email, password: hashedPassword, code: hashedCode, codeExp: codeExp });
 
         //save user
         await newUser.save();
