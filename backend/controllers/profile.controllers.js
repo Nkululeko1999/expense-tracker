@@ -7,8 +7,12 @@ import { validateEmail, validatePass } from '../utils/validation.utils.js';
 import { transporter } from '../config/email.config.js';
 
 export const updateProfile = async (req, res) => {
+    //Get user details from req.user
+    const userDetails = req.user;
+    const userId = userDetails.id;
+    
     try {
-        const { firstName, lastName, email, profilePic, password, gender, address, phoneNumber, userId } = req.body;
+        const { firstName, lastName, email, profilePic, password, gender, address, phoneNumber } = req.body;
 
         // Check if any required field is missing
         if (!firstName || !lastName || !email || !password || !gender || !address || !userId) {
@@ -64,8 +68,11 @@ export const updateProfile = async (req, res) => {
 };
 
 export const getProfileDetails = async (req, res) => {
-    const { userId } = req.params;
     try {
+        //Get user details from req.user
+        const userDetails = req.user;
+        const userId = userDetails.id;
+
         // Find the user in the database
         const user = await User.findById(userId);
 
