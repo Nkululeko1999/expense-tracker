@@ -5,6 +5,7 @@ import auth_router from "./routes/auth.routes.js";
 import { connectToDatabase } from "./config/db.config.js";
 import { errorHandler } from "./middlewares/error.middlewares.js";
 import profile_router from "./routes/profile.routes.js";
+import expense_router from "./routes/expense.routes.js";
 
 //Configure dotenv => enable values stored in .env file to be accessible
 dotenv.config();
@@ -41,3 +42,4 @@ app.use(errorHandler);
 //Router level middlewares
 app.use('/api/auth', auth_router);
 app.use('/api/profile', profile_router);
+app.use('/api/expense', expense_router);
