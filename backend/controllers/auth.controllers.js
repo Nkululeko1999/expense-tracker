@@ -4,7 +4,7 @@ import bcryptjs from "bcryptjs";
 import { User } from "../models/user.models.js";
 import { generateCode } from "../utils/helper.utils.js";
 import { transporter } from "../config/email.config.js";
-import { verificationTemplate } from "../utils/template.utils.js";
+import { forgotPasswordTemplate, verificationTemplate } from "../utils/template.utils.js";
 import jwt from "jsonwebtoken";
 
 
@@ -200,6 +200,76 @@ export const resendVerificationCode = async (req, res) => {
             success: true,
             status: 200,
             message: "Verification code resent successfully.",
+            token: token
+        });
+
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const forgetPassword = async (req, res) => {
+    const { email } = req.body;
+    try {
+        //check if email is valid
+        const isEmailValid = validateEmail(email);
+        if(!isEmailValid){
+            return res.status(422).json({
+                success: false,
+                statusCode: 422,
+                message: "Email format is invalid"
+            });
+        }
+
+        //Get user by email
+        const user = await User.findOne({email: email});
+        if(!user){
+            return res.status(422).json({
+                success: false,
+                statusCode: 404,
+                message: "User with this email is not found. Please login"
+            });
+        }
+
+        //Generate code
+        const code = generateCode();
+        const hashedCode = bcryptjs.hashSync(code, 12);
+        let codeExp = new Date();
+        codeExp = codeExp.setMinutes(codeExp.getMinutes() + 10);
+
+        //Update code and codeExp 
+        user.code = hashedCode;
+        user.codeExp = codeExp;
+
+        await user.save();
+
+         //Extract only useful information
+         const rest = {
+             id: user._id,
+             username: user.username,
+             email: user.email,
+             verified: user.userVerified
+         };
+ 
+
+         //Send email to user with verification code
+         await transporter.sendMail({
+            from: process.env.NODEMAILER_USER, 
+            to: email, 
+            subject: "One-time verification code - Forgot Password", 
+            html: forgotPasswordTemplate(code), 
+          });
+
+
+        //create jwt token
+        const secret = process.env.JWT_SECERT;
+        const token = jwt.sign(rest, secret, {expiresIn:'10m'});
+
+        return res.status(200).json({
+            success: true,
+            status: 200,
+            message: 'Verication code sent to your email. Confirm the code',
+            data: rest,
             token: token
         });
 
