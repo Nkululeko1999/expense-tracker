@@ -21,7 +21,7 @@ export const authenticateToken = (req, res, next) => {
             return res.status(403).json({
                 sucess: false,
                 statusCode: 403,
-                message: "Session has expired."
+                message: "Invalid Token."
             });n
         }
         req.user = user;
