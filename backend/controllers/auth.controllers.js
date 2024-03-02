@@ -6,6 +6,7 @@ import { generateCode } from "../utils/helper.utils.js";
 import { transporter } from "../config/email.config.js";
 import { forgotPasswordTemplate, signUpSuccessTemplate, verificationTemplate } from "../utils/template.utils.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 
 
@@ -80,7 +81,7 @@ export const register = async (req, res) => {
         return res.status(200).json({
             success: true,
             status: 200,
-            message: 'User successfully created',
+            message: 'User successfully created. Please verify your account.',
             data: rest,
             token: token
         });
@@ -102,6 +103,16 @@ export const verify = async (req, res) => {
                 message: "User not found. Please contact us."
             });
         }
+
+         //check if code does exist
+         if(user.code === null || user.codeExp === null){
+            return res.status(404).json({
+                sucess: false,
+                statusCode: 404,
+                message: "Please resend code. Verification code not found"
+            })
+        }
+
 
         //check if code provided is the same as the saved code - remember saved code is hashed
         const isCodeMatching = bcryptjs.compareSync(code, user.code);
@@ -144,7 +155,7 @@ export const verify = async (req, res) => {
         //Send email to user with verification code
         await transporter.sendMail({
             from: process.env.NODEMAILER_USER, 
-            to: email, 
+            to: user.email, 
             subject: "Successfully Signed Up", 
             html: signUpSuccessTemplate(), 
           });
@@ -297,7 +308,12 @@ export const resetPassword = async (req, res, next) => {
         }
 
         //Get user by userId
-        const user = await User.findById({_id: userId});
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+        
+        const user = await User.findById(userId);
+        
         if(!user){
             return res.status(404).json({
                 success: false,
@@ -355,6 +371,76 @@ export const resetPassword = async (req, res, next) => {
             message: "Password reset sucessfully."
         });
         
+    } catch (error) {
+        errorHandler(req, res, error);
+    }
+}
+
+export const login = async (req, res) => {
+    const { email, password, username } = req.body;
+    try {
+        //validate email => call validate util func
+        if(!(validateEmail(email))){
+            return res.status(422).json({success: false, status: 422, message: 'Email format is invalid'});
+        }
+
+        //validate password => call validate util
+        if(!(validatePass(password))){
+            return res.status(422).json({success: false, status: 422, message: 'Password format is invalid'});
+        }
+
+        //get user by email or username
+        const user = await User.findOne({ email: email });
+
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please create account."
+            });
+        }
+
+        //Check if acccount is verified
+        if(user.userVerified === false){
+            return res.status(422).json({
+                success: false,
+                statusCode: 422,
+                message: "Account not verified. Please verify account."
+            });
+        }
+
+        //Compare password with stored one
+        const isPasswordMatching = bcryptjs.compareSync(password, user.password);
+
+        //if password not matching
+        if(!isPasswordMatching){
+            return res.status(422).json({
+                success: false,
+                statusCode: 400,
+                message: "Invalid login credentials"
+            });
+        }
+
+        //Extract useful Info
+        const rest = {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            verified: user.userVerified
+        };
+
+        //Assign user token
+        const secret = process.env.JWT_SECERT;
+        const token = jwt.sign(rest, secret, {expiresIn:'1h'});
+
+        //Signin user
+        return res.status(200).json({
+            success: true,
+            status: 200,
+            message: 'Login Successfully',
+            data: rest,
+            token: token
+        });
     } catch (error) {
         errorHandler(req, res, error);
     }
