@@ -5,7 +5,12 @@ import { User } from "../models/user.models.js";
 import { generateCode } from "../utils/helper.utils.js";
 import { transporter } from "../config/email.config.js";
 import { verificationTemplate } from "../utils/template.utils.js";
+import jwt from "jsonwebtoken";
 
+
+// #######################################################################
+//AUTHENTICATION CONTROLLERS
+// #######################################################################
 
 export const register = async (req, res) => {
     try {
@@ -36,17 +41,28 @@ export const register = async (req, res) => {
 
         if(usernameExist){
             return res.status(409).json({success: false, status: 409, message: 'Username already taken.'});
-        }
+        }   
 
-        const newUser = new User({ username, email, password: hashedPassword });
-
+        //generate code and set expiration time of the code
         const code = generateCode();
+        let codeExp = new Date();
+        codeExp.setMinutes(codeExp.getMinutes() + 10);    //code expiry after 10 minutes
+
+        //Create a new user using the User model
+        const newUser = new User({ username, email, password: hashedPassword, code: code, codeExp: codeExp });
 
         //save user
         await newUser.save();
 
-        //Send email to user with verification token
+        //Extract only useful information
+        const rest = {
+            id: newUser._id,
+            username: newUser.username,
+            email: newUser.email,
+            verified: newUser.userVerified
+        };
 
+        //Send email to user with verification token
         const info = await transporter.sendMail({
             from: process.env.NODEMAILER_USER, 
             to: email, 
@@ -55,18 +71,16 @@ export const register = async (req, res) => {
           });
 
 
-        const rest = {
-            id: newUser._id,
-            username: newUser.username,
-            email: newUser.email,
-            verified: newUser.userVerified
-        }
+        //create jwt token
+        const secret = process.env.JWT_SECERT;
+        const token = jwt.sign(rest, secret, {expiresIn:'10m'});
 
         return res.status(200).json({
             success: true,
             status: 200,
             message: 'User successfully created',
-            data: rest
+            data: rest,
+            token: token
         });
     } catch (error) {
         errorHandler(req, res, error);

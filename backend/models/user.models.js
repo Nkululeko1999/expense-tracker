@@ -49,6 +49,16 @@ const userSchema = new mongoose.Schema({
         required: true
     },
 
+    code: {
+        type: String,
+        default: null,
+    },
+
+    codeExp: {
+        type: Date,
+        default: null
+    },
+
     userVerified: {
         type: Boolean,
         default: false,
