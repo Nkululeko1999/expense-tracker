@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import auth_router from "./routes/auth.routes.js";
 import { connectToDatabase } from "./config/db.config.js";
+import { errorHandler } from "./middlewares/error.middlewares.js";
 
 //Configure dotenv => enable values stored in .env file to be accessible
 dotenv.config();
@@ -31,6 +32,9 @@ const connection = async () => {
 
 //Invoke connection func
 connection();
+
+//Error level middleware
+app.use(errorHandler);
 
 
 //Router level middlewares

@@ -63,8 +63,8 @@ export const register = async (req, res) => {
             verified: newUser.userVerified
         };
 
-        //Send email to user with verification token
-        const info = await transporter.sendMail({
+        //Send email to user with verification code
+        await transporter.sendMail({
             from: process.env.NODEMAILER_USER, 
             to: email, 
             subject: "One-time verification code", 
@@ -117,22 +117,93 @@ export const verify = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 statusCode: 400,
-                message: "Verification code expired."
+                message: "Verification code expired. Please resend code."
             });
         }
 
         //Update User's verified status
-        user.verified = true;
+        user.userVerified = true;
+
+        //set code and codeExp to null
+        user.code = null;
+        user.codeExp = null;
         
         //save user with updated status
         await user.save();
 
+        //Extract only useful information
+        const rest = {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            verified: user.userVerified
+        };
+
         return res.status(200).json({
             success: true,
             statusCode: 200,
-            message: "User account verified successfully."
+            message: "User account verified successfully.",
+            data: rest
         });
     } catch (error) {
-        errorHandler(error);
+        errorHandler(req, res, error);
+    }
+}
+
+export const resendVerificationCode = async (req, res) => {
+    const { email } = req.body;
+    try {
+        //get user by email
+        const user = await User.findOne({email: email});
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found. Please create account."
+            });
+        }
+
+        //generate code, codeExp and hash the code
+        const code = generateCode();
+        const hashedCode = bcryptjs.hashSync(code, 12);
+        let codeExp = new Date();
+        codeExp.setMinutes(codeExp.getMinutes() + 10);   
+
+        //Update user's code and code exp
+        user.code = hashedCode;
+        user.codeExp = codeExp;
+
+        //save user
+        await user.save();
+
+        //Extract only useful information
+        const rest = {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            verified: user.userVerified
+        };
+
+        //Send email to user with verification token
+        await transporter.sendMail({
+            from: process.env.NODEMAILER_USER, 
+            to: email, 
+            subject: "One-time verification code", 
+            html: verificationTemplate(code), 
+          });
+
+          //create jwt token
+        const secret = process.env.JWT_SECERT;
+        const token = jwt.sign(rest, secret, {expiresIn:'10m'});
+
+        return res.status(200).json({
+            success: true,
+            status: 200,
+            message: "Verification code resent successfully.",
+            token: token
+        });
+
+    } catch (error) {
+        errorHandler(req, res, error);
     }
 }
