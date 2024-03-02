@@ -175,3 +175,57 @@ export const signUpSuccessTemplate = () => `
     </div>
 </body>
 </html>`;
+
+
+
+
+export const profileUpdatedTemplate = () => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Updated</title>
+    <style>
+        .container-box {
+            background-color: #f1f5f9;
+            padding: 50px;
+        }
+
+        .content-box {
+            width: 60%;
+            border-radius: 10px;
+            box-shadow: 1 2 10px rgba(0, 0, 0, 0.1), -1 -2 10px rgba(0, 0, 0, 0.1);
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        .content-box p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .content-box h1 {
+            font-size: 22px;
+            color: #0f172a;
+        }
+
+        .footer-text {
+            font-size: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>   
+    <div class="container-box">
+        <div class="content-box">
+            <h1>Profile Updated</h1>
+            <p>Your profile has been successfully updated. Enjoy using Expense Tracker with your updated information.</p>
+            <p>If you have any questions or need assistance, feel free to contact our support team.</p>
+        </div>
+
+        <p class="footer-text">This message was sent from Expense Tracker, Inc., 1633 Fox, 38th floor, JHB, DT 1634</p>
+    </div>
+</body>
+</html>`;
