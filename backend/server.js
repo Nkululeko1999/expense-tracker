@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import auth_router from "./routes/auth.routes.js";
 import { connectToDatabase } from "./config/db.config.js";
 import { errorHandler } from "./middlewares/error.middlewares.js";
+import profile_router from "./routes/profile.routes.js";
 
 //Configure dotenv => enable values stored in .env file to be accessible
 dotenv.config();
@@ -39,3 +40,4 @@ app.use(errorHandler);
 
 //Router level middlewares
 app.use('/api/auth', auth_router);
+app.use('/api/profile', profile_router);
