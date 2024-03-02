@@ -22,6 +22,8 @@ This project is buillt using MongoDB, React 18, Node.js, Express and Redis
         PORT=5000
         MONGODB_URI=set you atlas url or run mongodb local
         JWT_SECERT=your_jwt_secret
+        NODEMAILER_USER=your_nodemailer_username e.g email
+        NODEMAILER_PASS=your_nodemailer_password
 
 5. Start the server:
     npm run dev
