@@ -21,9 +21,14 @@ const expenseSchema = new mongoose.Schema({
     description: {
         type: String,
         required: true,
+    },
+
+    date: {
+        type: Date,
+        default: Date.now,
     }
 
 },{timestamps: true});
 
 
-const Expense = mongoose.Model('Expense', expenseSchema);
+export const Expense = mongoose.Model('Expense', expenseSchema);
