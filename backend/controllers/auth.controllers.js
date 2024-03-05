@@ -426,7 +426,8 @@ export const login = async (req, res) => {
             id: user._id,
             username: user.username,
             email: user.email,
-            verified: user.userVerified
+            verified: user.userVerified,
+            profilePic: user.profilePic
         };
 
         //Assign user token
