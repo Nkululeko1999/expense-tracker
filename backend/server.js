@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
+import cors from "cors";
 import auth_router from "./routes/auth.routes.js";
 import { connectToDatabase } from "./config/db.config.js";
 import { errorHandler } from "./middlewares/error.middlewares.js";
@@ -16,6 +17,11 @@ const app = express();
 //Application level middleware
 app.use(express.json());
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(cors({
+    origin: 'http://localhost:5173/', 
+    methods: ['GET', 'POST', 'PATCH'],      
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}))
 
 const port = process.env.PORT;
 
