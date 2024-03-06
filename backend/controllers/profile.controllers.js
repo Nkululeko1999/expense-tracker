@@ -5,7 +5,6 @@ import { profileUpdatedTemplate } from '../utils/template.utils.js';
 import { errorHandler } from '../middlewares/error.middlewares.js';
 import { validateEmail, validatePass } from '../utils/validation.utils.js';
 import { transporter } from '../config/email.config.js';
-import { upload } from '../config/gridfs.js';
 
 export const updateProfile = async (req, res) => {
     //Get user details from req.user
