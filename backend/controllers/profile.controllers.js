@@ -5,6 +5,7 @@ import { profileUpdatedTemplate } from '../utils/template.utils.js';
 import { errorHandler } from '../middlewares/error.middlewares.js';
 import { validateEmail, validatePass } from '../utils/validation.utils.js';
 import { transporter } from '../config/email.config.js';
+import { upload } from '../config/gridfs.js';
 
 export const updateProfile = async (req, res) => {
     //Get user details from req.user
@@ -12,19 +13,16 @@ export const updateProfile = async (req, res) => {
     const userId = userDetails.id;
     
     try {
-        const { firstName, lastName, email, profilePic, password, gender, address, phoneNumber } = req.body;
+        const { firstName, lastName, email, profilePic, gender, address, phoneNumber } = req.body;
 
         // Check if any required field is missing
-        if (!firstName || !lastName || !email || !password || !gender || !address || !userId) {
+        if (!firstName || !lastName || !email || !gender || !address || !userId) {
             return res.status(400).json({ success: false, status: 400, message: 'Required fields are missing' });
         }
 
         // Validate email and password formats
         if (!validateEmail(email)) {
             return res.status(422).json({ success: false, status: 422, message: 'Email format is invalid' });
-        }
-        if (!validatePass(password)) {
-            return res.status(422).json({ success: false, status: 422, message: 'Password format is invalid' });
         }
 
         // Check if userId is a valid ObjectId
@@ -45,10 +43,20 @@ export const updateProfile = async (req, res) => {
             phoneNumber,
             email,
             profilePic,
-            password: bcryptjs.hashSync(password, 12), // Hash password
             gender,
             address
         });
+
+        // Check if file is uploaded
+        if (req.file) {
+            // Get file details
+            const { filename, contentType } = req.file;
+            // Set profilePic data and contentType
+            user.profilePic = {
+                data: filename, // Store the file name
+                contentType: contentType
+            };
+        }
 
         // Save updated user
         await user.save();
