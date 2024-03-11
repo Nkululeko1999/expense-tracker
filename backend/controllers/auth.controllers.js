@@ -23,14 +23,6 @@ export const register = async (req, res) => {
             return res.status(422).json({success: false, status: 422, message: 'Email format is invalid'});
         }
 
-        //validate password => call validate util
-        if(!(validatePass(password))){
-            return res.status(422).json({success: false, status: 422, message: 'Password format is invalid'});
-        }
-
-        //hash password
-        const hashedPassword = bcryptjs.hashSync(password, 12);
-
         //Check if username or email exist
         //If user exist but email does not => username already taken
         //if username and email exist then user already => login
@@ -43,7 +35,15 @@ export const register = async (req, res) => {
 
         if(usernameExist){
             return res.status(409).json({success: false, status: 409, message: 'Username already taken.'});
-        }   
+        }  
+
+        //validate password => call validate util
+        if(!(validatePass(password))){
+            return res.status(422).json({success: false, status: 422, message: 'Password format is invalid'});
+        }
+
+        //hash password
+        const hashedPassword = bcryptjs.hashSync(password, 12); 
 
         //generate code and set expiration time of the code
         const code = generateCode();
