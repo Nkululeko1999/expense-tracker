@@ -22,7 +22,7 @@ export const authenticateToken = (req, res, next) => {
                 sucess: false,
                 statusCode: 403,
                 message: "Invalid Token."
-            });n
+            });
         }
         req.user = user;
         next();
